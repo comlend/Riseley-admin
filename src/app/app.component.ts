@@ -1,7 +1,6 @@
 import { Component, ViewChild } from '@angular/core';
 import { Nav, Platform, Events } from 'ionic-angular';
 import { StatusBar } from '@ionic-native/status-bar';
-import { SplashScreen } from '@ionic-native/splash-screen';
 import * as firebase from 'firebase';
 import { HomePage } from '../pages/home/home';
 import { ListPage } from '../pages/list/list';
@@ -13,6 +12,7 @@ import { NewsPage } from '../pages/news/news';
 import { LocalPage } from '../pages/local/local';
 import { FirebaseProvider } from '../providers/firebase/firebase';
 import { BuildingInfoPage } from '../pages/building-info/building-info';
+import { HouseRulesPage } from '../pages/house-rules/house-rules';
 
 @Component({
   templateUrl: 'app.html'
@@ -24,7 +24,7 @@ export class MyApp {
 
   pages: Array<{title: string, component: any}>;
 
-  constructor(public platform: Platform, public statusBar: StatusBar, public splashScreen: SplashScreen, public global: GlobalsProvider, public event: Events, public firebase: FirebaseProvider) {
+  constructor(public platform: Platform, public statusBar: StatusBar, public global: GlobalsProvider, public event: Events, public firebase: FirebaseProvider) {
     this.initializeFirebase();
     this.initializeApp();
 
@@ -35,7 +35,8 @@ export class MyApp {
       { title: 'Businesses', component: BusinessPage },
       { title: 'News', component: NewsPage},
       { title: 'Local', component: LocalPage},
-      { title: 'Building Info', component: BuildingInfoPage},
+      { title: 'Building Info', component: BuildingInfoPage }, 
+      { title: 'House Rules', component: HouseRulesPage },
       { title: 'Log Out', component: LoginPage }
     ];
 
@@ -46,7 +47,6 @@ export class MyApp {
       // Okay, so the platform is ready and our plugins are available.
       // Here you can do any higher level native things you might need.
       this.statusBar.styleDefault();
-      this.splashScreen.hide();
     });
   }
 
@@ -81,15 +81,12 @@ export class MyApp {
       else {
         this.global.userId = user.uid;
 
-        console.log('new user ->', this.global.userId);
+        // console.log('new user ->', this.global.userId);
         var promises = [this.getUserData(), this.getNeighbours(), this.getAllNews(),this.getAllLocals()];
         Promise.all(promises).then((values) => {
           this.fetchBuildinginfo();
-          console.log('all data loaded', values);
-
-            this.rootPage = HomePage;
-          
-
+          this.fetchHouseRules();
+          this.rootPage = HomePage;
         }).catch((err) => {
           console.log('Promise.all ', err);
         });
@@ -223,6 +220,26 @@ export class MyApp {
           // this.global.localsCount = localsArr.length;
           console.log('all building info in globals', this.global.buildingInfo);
           this.event.publish('buildingInfoupdated');
+
+          resolve();
+
+        } else {
+          reject();
+        }
+      });
+    });
+  }
+  fetchHouseRules() {
+    return new Promise((resolve, reject) => {
+      var dbRef = firebase.database().ref('/houseRules/');
+      var houseRules = [];
+      dbRef.on('value', (data) => {
+        if (data.val() != 'default') {
+          houseRules = _.toArray(data.val()).reverse();
+          this.global.houseRules = houseRules;
+          // this.global.localsCount = localsArr.length;
+          console.log('all house rules info in globals', this.global.houseRules);
+          this.event.publish('houseRulesupdated');
 
           resolve();
 
